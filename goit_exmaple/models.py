@@ -17,7 +17,7 @@ note_m2m_tag = Table(
     Column("note", Integer, ForeignKey("notes.id", ondelete="CASCADE")),
     Column("tag", Integer, ForeignKey("tags.id", ondelete="CASCADE")),)
 
- 
+
 # Таблиця notes, де зберігатимуться назви завдань
 class Note(Base):
     __tablename__ = "notes"
