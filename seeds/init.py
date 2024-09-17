@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 from random import choice, choices, randint
 
 from faker import Faker

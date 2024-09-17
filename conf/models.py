@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy.sql.sqltypes import Date
+from sqlalchemy.ext.hybrid import hybrid_property
 
 
 Base = declarative_base()
@@ -15,6 +16,10 @@ class Student(Base):
     last_name = Column(String(150), nullable=False)
     group_id = Column(Integer, ForeignKey('groups.id'), nullable=False)
     scores = relationship('Score', backref='students')
+
+    @hybrid_property
+    def fullname(self):
+        return self.first_name + ' ' + self.last_name
 
 
 class Group(Base):
@@ -29,6 +34,10 @@ class Teacher(Base):
     first_name = Column(String(150), nullable=False)
     last_name = Column(String(150), nullable=False)
     subjects = relationship('Subject', back_populates='teachers')
+
+    @hybrid_property
+    def fullname(self):
+        return self.first_name + ' ' + self.last_name
 
 
 class Subject(Base):
