@@ -66,11 +66,10 @@ def insert_scores(scores_count):
     subjects = session.query(Subject).all()
 
     for student in students:
-        fake_date = fake.date_between(start_date='-2y')
         for _ in range(scores_count):
             score = Score(
                 score=choices(SCORES, weights=[5, 6, 7, 8, 8, 8, 6, 3, 2, 1, 1], k=1)[0],
-                date=fake_date,
+                date=fake.date_between(start_date='-2y'),
                 student_id=student.id,
                 subject_id=choice(subjects).id,
             )
