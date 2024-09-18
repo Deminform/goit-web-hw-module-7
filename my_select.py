@@ -1,20 +1,7 @@
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import select, and_, or_, func, desc
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy import and_, func, desc
 
 from conf.db import session
 from conf.models import Student, Group, Teacher, Score, Subject
-
-"""
-'Mathematics'
-'Physics'
-'History'
-'Geography'
-'Computer Science'
-'Biology', 'Chemistry'
-'Literature'
-'Art'
-"""
 
 
 def select_1():
@@ -145,6 +132,7 @@ def select_12(group, subject):
 
 if __name__ == '__main__':
     func_list = [
+        select_0(),
         select_1(),
         select_2('Mathematics'),
         select_3('History'),
@@ -163,4 +151,4 @@ if __name__ == '__main__':
         print(f'\n----------------------- func #: {i + 1} --------------------------\n')
         print(func)
 
-    # select_12('G320', 'History')
+

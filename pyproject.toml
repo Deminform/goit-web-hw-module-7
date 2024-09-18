@@ -11,6 +11,7 @@ sqlalchemy = "^2.0.34"
 alembic = "^1.13.2"
 faker = "^28.4.1"
 psycopg2 = "^2.9.9"
+prettytable = "^3.11.0"
 
 
 [build-system]
