@@ -7,7 +7,7 @@ from prettytable import PrettyTable
 
 from conf.db import session
 from conf.models import Student, Group, Teacher, Score, Subject
-
+from db_error_decorator import db_error_decorator
 
 table = PrettyTable()
 
@@ -20,25 +20,21 @@ model_dict = {
 }
 
 
-def create_student(args):
+@db_error_decorator
+def create_person(args):
+    model, *_ = model_dict[args.model]
     first_name, last_name = args.name.split(' ')
-    student = Student(
-        first_name=first_name,
-        last_name=last_name,
-        group_id=args.group_name)
-    session.add(student)
+    kwargs = {'first_name': first_name, 'last_name': last_name}
+    if args.model == 'Student':
+        kwargs['group_id'] = args.group_id
+
+    person = model(**kwargs)
+    session.add(person)
     session.commit()
+    return "Successful!"
 
 
-def create_teacher(args):
-    first_name, last_name = args.name.split(' ')
-    teacher = Teacher(
-        first_name=first_name,
-        last_name=last_name)
-    session.add(teacher)
-    session.commit()
-
-
+@db_error_decorator
 def create_group(args):
     group = session.query(Group.name).filter(Group.name == args.name).all()
     if not group:
@@ -46,34 +42,39 @@ def create_group(args):
             name=args.name)
         session.add(group)
         session.commit()
-        message = f'Group: {args.name} was created'
-    else:
-        message = f'Group: {args.name} already exists'
-    return message
+    return "Successful!"
 
 
+@db_error_decorator
 def create_subject(args):
-    teacher = session.query(func.count(Teacher.id)).scalar()
+    teacher = session.query(Teacher.id).all()
     subject = Subject(
         name=args.name,
-        teacher_id=random.randint(1, teacher))
+        teacher_id=random.choice([t.id for t in teacher]))
     session.add(subject)
     session.commit()
+    return "Successful!"
 
 
+@db_error_decorator
 def create_score(args):
-    student = session.query(Student.id).filter(Student.fullname == args.name).one()
-    subject = session.query(Subject.id).filter(Subject.name == args.subject).one()
+    first_name, last_name = args.name.split(' ')
+    student = (session.query(Student.id)
+               .filter(and_(Student.first_name == first_name, Student.last_name == last_name))
+               .one())
+    subject = (session.query(Subject.id).filter(Subject.name == args.subject).one())
     score = Score(
         score=args.score,
         date=datetime.date.today(),
         student_id=student.id,
         subject_id=subject.id
-        )
+    )
     session.add(score)
     session.commit()
+    return "Successful!"
 
 
+@db_error_decorator
 def show_list(args):
     model, columns = model_dict[args.model]
     result = session.query(model).all()
@@ -90,18 +91,25 @@ def show_list(args):
     return table.get_string()
 
 
+@db_error_decorator
 def remove_row_by_id(args):
-    message = ''
     model, *_ = model_dict[args.model]
     result = session.query(model).filter(model.id == args.index).scalar()
-    try:
-        session.delete(result)
-        session.commit()
-        message = f'{args.model} with id {args.index} was removed'
-    except Exception as e:
-        message = f'{args.model} with id {args.index} was not removed'
-    finally:
-        return message
+    session.delete(result)
+    session.commit()
+    return f'Row {args.index} in {args.model} is deleted.'
+
+
+@db_error_decorator
+def update_row_by_id(args):
+    first_name, last_name = args.name.split(' ')
+    model, *_ = model_dict[args.model]
+    result = session.query(model).filter(model.id == args.index).scalar()
+    if result:
+        result.first_name = first_name
+        result.last_name = last_name
+    session.commit()
+    return f'Row {args.index} in {args.model} is updated.'
 
 
 if __name__ == '__main__':
@@ -157,12 +165,10 @@ if __name__ == '__main__':
 
     argv = parser.parse_args()
 
-    if argv.action == 'create' and argv.model == 'Student':
-        print(create_student(argv))
-    elif argv.action == 'create' and argv.model == 'Teacher':
-        print(create_teacher(argv))  # -a create -m Teacher -n 'Boris Jonson'
+    if argv.action == 'create' and argv.model in ['Student', 'Teacher']:
+        print(create_person(argv))
     elif argv.action == 'create' and argv.model == 'Score':
-        print(create_teacher(argv))  # -a create -m Score -n 'John Doe' --score 4 -- subject 'Art'
+        print(create_score(argv))  # -a create -m Score -n 'John Doe' --score 4 -- subject 'Art'
     elif argv.action == 'create' and argv.model == 'Group':
         print(create_group(argv))
     elif argv.action == 'create' and argv.model == 'Subject':
@@ -173,3 +179,6 @@ if __name__ == '__main__':
 
     elif argv.action == 'remove':
         print(remove_row_by_id(argv))
+
+    elif argv.action == 'update':
+        print(update_row_by_id(argv))
