@@ -90,6 +90,20 @@ def show_list(args):
     return table.get_string()
 
 
+def remove_row_by_id(args):
+    message = ''
+    model, *_ = model_dict[args.model]
+    result = session.query(model).filter(model.id == args.index).scalar()
+    try:
+        session.delete(result)
+        session.commit()
+        message = f'{args.model} with id {args.index} was removed'
+    except Exception as e:
+        message = f'{args.model} with id {args.index} was not removed'
+    finally:
+        return message
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog='Homework for "Python-Web | Module 7',
@@ -156,3 +170,6 @@ if __name__ == '__main__':
 
     elif argv.action == 'list':
         print(show_list(argv))
+
+    elif argv.action == 'remove':
+        print(remove_row_by_id(argv))
