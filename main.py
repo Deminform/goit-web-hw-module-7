@@ -48,10 +48,9 @@ def create_group(args):
 
 @db_error_decorator
 def create_subject(args):
-    teacher = session.query(Teacher).order_by(func.random()).first()
     subject = Subject(
         name=args.name,
-        teacher_id=teacher.id)
+        teacher_id=args.link_id)
     session.add(subject)
     session.commit()
     return "Successful!"
@@ -150,15 +149,32 @@ if __name__ == '__main__':
         prog='Homework for "Python-Web | Module 7',
         description='CLI program for CRUD operations with tables',
         epilog='Commands for the test:\n'
-                    'python main.py -a create -m Student -n "John Doe" --group_id 1\n'
-                    'python main.py -a create -m Group -n "Group A")\n'
-                    'python main.py -a create -m Teacher -n "Albert Einstein"\n'
-                    'python main.py -a create -m Subject --name "Psychology"\n'
-                    'python main.py -a create -m Score -n "John Doe" --subject "Mathematics" --score 4.0\n'
-                    'python main.py -a create -m Score -id 38 --subject "Mathematics" --score 4.0\n'
-                    'python main.py -a list -m Student\n'
-                    'python main.py -a remove -m Student -id 1\n'
-                    'python main.py -a update -m Student -id 1 -n "Johnathan Doe"',
+               '1. Create a student and assign to a group (using group ID):\n'
+               '   python main.py -a create -m Student -n "John Doe" --group_id 1\n\n'
+               '2. Create a group:\n'
+               '   python main.py -a create -m Group -n "Group A"\n\n'
+               '3. Create a teacher:\n'
+               '   python main.py -a create -m Teacher -n "Albert Einstein"\n\n'
+               '4. Create a subject (teacher assigned randomly):\n'
+               '   python main.py -a create -m Subject --name "Psychology" --link_id 1\n\n'
+               '5. Create a score for a student (using name):\n'
+               '   python main.py -a create -m Score -n "John Doe" --subject "Mathematics" --score 4.0\n\n'
+               '6. Create a score for a student (using ID):\n'
+               '   python main.py -a create -m Score -id 38 --subject "Mathematics" --score 4.0\n\n'
+               '7. List all students:\n'
+               '   python main.py -a list -m Student\n\n'
+               '8. Remove a student by ID:\n'
+               '   python main.py -a remove -m Student -id 1\n\n'
+               '9. Update a student name by ID:\n'
+               '   python main.py -a update -m Student -id 1 -n "Johnathan Doe"\n\n'
+               '10. Update a student group by ID:\n'
+               '    python main.py -a update -m Student -id 1 --link_id 2\n\n'
+               '11. Update a subject to assign a new teacher (by teacher ID):\n'
+               '    python main.py -a update -m Subject -id 7 --link_id 4\n\n'
+               '12. Update a subject name by ID:\n'
+               '    python main.py -a update -m Subject -id 5 --name "Advanced Psychology"\n\n'
+               '13. Update a group name by ID:\n'
+               '    python main.py -a update -m Group -id 3 --name "Group B"\n',
         formatter_class=argparse.RawTextHelpFormatter
     )
 
@@ -186,7 +202,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--link_id',
                         type=int,
-                        help='• Additional identifier for linking tables',
+                        help='• Additional identifier for linking tables.',
                         metavar='')
 
     parser.add_argument('--score',
