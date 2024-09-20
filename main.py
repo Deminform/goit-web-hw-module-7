@@ -7,7 +7,7 @@ from prettytable import PrettyTable
 
 from conf.db import session
 from conf.models import Student, Group, Teacher, Score, Subject
-from db_error_decorator import db_error_decorator
+from error_decorator import db_error_decorator
 
 table = PrettyTable()
 
@@ -26,7 +26,7 @@ def create_person(args):
     first_name, last_name = args.name.split(' ')
     kwargs = {'first_name': first_name, 'last_name': last_name}
     if args.model == 'Student':
-        kwargs['group_id'] = args.group_id
+        kwargs['group_id'] = args.link_id
 
     person = model(**kwargs)
     session.add(person)
@@ -113,13 +113,34 @@ def remove_row_by_id(args):
 
 @db_error_decorator
 def update_row_by_id(args):
-    first_name, last_name = args.name.split(' ')
     model, *_ = model_dict[args.model]
     result = session.query(model).filter(model.id == args.index).scalar()
     if not result:
         return "No such row"
-    result.first_name = first_name
-    result.last_name = last_name
+
+    if args.model == 'Score':
+        if not args.score:
+            return f"Score not provided for {args.model}."
+        result.score = args.score
+
+    elif args.model == 'Subject' and args.link_id:
+        result.teacher_id = args.link_id
+
+    elif args.model in ['Subject', 'Group']:
+        if not args.name:
+            return f"Name not provided for {args.model}."
+        result.name = args.name
+
+    elif args.model == 'Student' and args.link_id:
+        result.group_id = args.link_id
+
+    elif args.model in ['Student', 'Teacher']:
+        if not args.name:
+            return f"Name not provided for {args.model}."
+        first_name, last_name = args.name.split(' ')
+        result.first_name = first_name
+        result.last_name = last_name
+
     session.commit()
     return f'Row {args.index} in {args.model} is updated.'
 
@@ -134,6 +155,7 @@ if __name__ == '__main__':
                     'python main.py -a create -m Teacher -n "Albert Einstein"\n'
                     'python main.py -a create -m Subject --name "Psychology"\n'
                     'python main.py -a create -m Score -n "John Doe" --subject "Mathematics" --score 4.0\n'
+                    'python main.py -a create -m Score -id 38 --subject "Mathematics" --score 4.0\n'
                     'python main.py -a list -m Student\n'
                     'python main.py -a remove -m Student -id 1\n'
                     'python main.py -a update -m Student -id 1 -n "Johnathan Doe"',
@@ -162,9 +184,9 @@ if __name__ == '__main__':
                         help='• Row index.',
                         metavar='')
 
-    parser.add_argument('--group_id',
-                        type=str,
-                        help='• Group id for creating the “Student” model.',
+    parser.add_argument('--link_id',
+                        type=int,
+                        help='• Additional identifier for linking tables',
                         metavar='')
 
     parser.add_argument('--score',
