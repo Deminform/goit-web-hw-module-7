@@ -37,20 +37,21 @@ def create_person(args):
 @db_error_decorator
 def create_group(args):
     group = session.query(Group.name).filter(Group.name == args.name).all()
-    if not group:
-        group = Group(
-            name=args.name)
-        session.add(group)
-        session.commit()
+    if group:
+        return "Already Exists!"
+    group = Group(
+        name=args.name)
+    session.add(group)
+    session.commit()
     return "Successful!"
 
 
 @db_error_decorator
 def create_subject(args):
-    teacher = session.query(Teacher.id).all()
+    teacher = session.query(Teacher).order_by(func.random()).first()
     subject = Subject(
         name=args.name,
-        teacher_id=random.choice([t.id for t in teacher]))
+        teacher_id=teacher.id)
     session.add(subject)
     session.commit()
     return "Successful!"
@@ -58,11 +59,19 @@ def create_subject(args):
 
 @db_error_decorator
 def create_score(args):
-    first_name, last_name = args.name.split(' ')
-    student = (session.query(Student.id)
-               .filter(and_(Student.first_name == first_name, Student.last_name == last_name))
-               .one())
-    subject = (session.query(Subject.id).filter(Subject.name == args.subject).one())
+    student = None
+    if args.index:
+        student = (session.query(Student.id).filter(Student.id == args.index).first())
+    elif args.name:
+        first_name, last_name = args.name.split(' ')
+        student = (session.query(Student.id)
+                   .filter(and_(Student.first_name == first_name, Student.last_name == last_name))
+                   .first())
+    subject = (session.query(Subject.id).filter(Subject.name == args.subject).first())
+    if not student:
+        return "Student Not Found!"
+    elif not subject:
+        return "Subject Not Found!"
     score = Score(
         score=args.score,
         date=datetime.date.today(),
@@ -95,6 +104,8 @@ def show_list(args):
 def remove_row_by_id(args):
     model, *_ = model_dict[args.model]
     result = session.query(model).filter(model.id == args.index).scalar()
+    if not result:
+        return "No such row"
     session.delete(result)
     session.commit()
     return f'Row {args.index} in {args.model} is deleted.'
@@ -105,9 +116,10 @@ def update_row_by_id(args):
     first_name, last_name = args.name.split(' ')
     model, *_ = model_dict[args.model]
     result = session.query(model).filter(model.id == args.index).scalar()
-    if result:
-        result.first_name = first_name
-        result.last_name = last_name
+    if not result:
+        return "No such row"
+    result.first_name = first_name
+    result.last_name = last_name
     session.commit()
     return f'Row {args.index} in {args.model} is updated.'
 
@@ -116,51 +128,53 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog='Homework for "Python-Web | Module 7',
         description='CLI program for CRUD operations with tables',
-        epilog='Helpful text for the user will be added')
+        epilog='Commands for the test:\n'
+                    'python main.py -a create -m Student -n "John Doe" --group_id 1\n'
+                    'python main.py -a create -m Group -n "Group A")\n'
+                    'python main.py -a create -m Teacher -n "Albert Einstein"\n'
+                    'python main.py -a create -m Subject --name "Psychology"\n'
+                    'python main.py -a create -m Score -n "John Doe" --subject "Mathematics" --score 4.0\n'
+                    'python main.py -a list -m Student\n'
+                    'python main.py -a remove -m Student -id 1\n'
+                    'python main.py -a update -m Student -id 1 -n "Johnathan Doe"',
+        formatter_class=argparse.RawTextHelpFormatter
+    )
 
     parser.add_argument('-a', '--action',
                         type=str,
-                        help='CRUD operation [create, update, list, remove]',
+                        help='• Options: create / update / list / remove.',
                         metavar='',
                         required=True)
 
     parser.add_argument('-m', '--model',
                         type=str,
-                        help='Choose a model ["Student", "Group", "Teacher", "Score", "Subject"]',
+                        help='• Choose a model: Student / Group / Teacher / Score / Subject.',
                         metavar='',
                         required=True)
 
-    parser.add_argument('-g', '--group_name',
-                        type=str,
-                        help='Need to choose a model',
-                        metavar='')
-
-    parser.add_argument('-sc', '--score',
-                        type=float,
-                        help='Need to choose a score [4.0, 3.7, 3.3, 3.0, 2.7, 2.3, 2.0, 1.7, 1.3, 1.0, 0.0]',
-                        metavar='')
-
-    parser.add_argument('-sub', '--subject',
-                        type=str,
-                        help='Need to choose a score ["Mathematics", '
-                             '"Physics", '
-                             '"History", '
-                             '"Geography", '
-                             '"Computer", "Science",'
-                             ' "Biology", '
-                             '"Chemistry", '
-                             '"Literature", '
-                             '"Art"]',
-                        metavar='')
-
     parser.add_argument('-n', '--name',
                         type=str,
-                        help='Enter fullname "first_name last_name',
+                        help='• Enter fullname "first_name last_name".',
                         metavar='')
 
     parser.add_argument('-id', '--index',
                         type=int,
-                        help='Row index',
+                        help='• Row index.',
+                        metavar='')
+
+    parser.add_argument('--group_id',
+                        type=str,
+                        help='• Group id for creating the “Student” model.',
+                        metavar='')
+
+    parser.add_argument('--score',
+                        type=float,
+                        help='• Score options: 4.0 / 3.7 / 3.3 / 3.0 / 2.7 / 2.3 / 2.0 / 1.7 / 1.3 / 1.0 / 0.0.',
+                        metavar='')
+
+    parser.add_argument('--subject',
+                        type=str,
+                        help='• To show subjects options use: "python main.py -a list -m Subject".',
                         metavar='')
 
     argv = parser.parse_args()
@@ -172,7 +186,7 @@ if __name__ == '__main__':
     elif argv.action == 'create' and argv.model == 'Group':
         print(create_group(argv))
     elif argv.action == 'create' and argv.model == 'Subject':
-        print(create_subject(argv))  # -a create -m Subject --name 'G777'
+        print(create_subject(argv))  # -a create -m Subject --name 'G777' (Вчитель назначається випадково)
 
     elif argv.action == 'list':
         print(show_list(argv))
